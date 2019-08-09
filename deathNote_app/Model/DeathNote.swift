@@ -9,9 +9,7 @@
 import Foundation
 
 struct DeathNote {
-    var name: String
-    var description: String?
-    var time: String
-    
-    
+    let name: String
+    let description: String?
+    let time: String
 }

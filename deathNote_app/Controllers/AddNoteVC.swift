@@ -9,14 +9,25 @@
 import UIKit
 
 class AddNoteVC: UIViewController {
-
-    var delegate: AddNewDeathNoteDelegate?
-    private let datePicker = UIDatePicker()
-    private var formatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d MMM yyyy HH:mm"
-        return formatter
+    
+    private enum Constants {
+        static let placeholderText = "••••••••••"
+        static let placeholderEmoji = "🧟‍♂️"
+        static let nameCharacterLimit = 30
+        static let descriptionCharacterLimit = 200
+        static let maximumLines = 5
+        static let dateFormat = "d MMM yyyy HH:mm"
+        static let localeIdentifier = "en_GB"
     }
+    
+    weak var delegate: AddNewDeathNoteDelegate?
+    
+    private let datePicker = UIDatePicker()
+    private lazy var dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = Constants.dateFormat
+        return formatter
+    }()
     
     @IBOutlet private weak var descriptionViewHeightConstraint: NSLayoutConstraint!
     @IBOutlet private weak var nameField: UITextField! {
@@ -34,93 +45,105 @@ class AddNoteVC: UIViewController {
             dateField.inputView = datePicker
         }
     }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupUI()
+        setupDatePicker()
+    }
+    
     @IBAction private func onTouchDoneButton(_ sender: UIBarButtonItem) {
         guard let name = nameField.text, !name.isEmpty else {
             showAlert(title: "Error", message: "Fill Name Field")
             return
         }
-        guard var description = descriptionView.text else {
-            return
-        }
-        guard let date = dateField.text else {
-            return
-        }
         
-        if description == "••••••••••" {
-            description = "🧟‍♂️"
+        guard var description = descriptionView.text else { return }
+        guard let date = dateField.text else { return }
+        
+        if description == Constants.placeholderText {
+            description = Constants.placeholderEmoji
         }
         
         let newDeathNote = DeathNote(name: name, description: description, time: date)
-        delegate?.onCreatedNew(note: newDeathNote)
+        delegate?.didCreateNewNote(newDeathNote)
         navigationController?.popViewController(animated: true)
     }
     
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        nameField.inputAccessoryView = createKeyboardToolbar()
-        dateField.inputAccessoryView = createKeyboardToolbar()
-        descriptionView.inputAccessoryView = createKeyboardToolbar()
+    private func setupUI() {
+        let toolbar = createKeyboardToolbar()
+        nameField.inputAccessoryView = toolbar
+        dateField.inputAccessoryView = toolbar
+        descriptionView.inputAccessoryView = toolbar
         
-        descriptionView.text = "••••••••••"
+        descriptionView.text = Constants.placeholderText
         descriptionView.textColor = .lightGray
-        descriptionView.textContainer.maximumNumberOfLines = 5
-
+        descriptionView.textContainer.maximumNumberOfLines = Constants.maximumLines
+        
         dateField.tintColor = .clear
-        dateField.text = formatter.string(from: Date())
-        datePicker.locale = Locale(identifier: "en_GB")
+        dateField.text = dateFormatter.string(from: Date())
+    }
+    
+    private func setupDatePicker() {
+        datePicker.locale = Locale(identifier: Constants.localeIdentifier)
         datePicker.minimumDate = Date()
         datePicker.datePickerMode = .dateAndTime
-        datePicker.addTarget(self, action: #selector(AddNoteVC
-            .datePickerValueChanged(sender:)), for: UIControl.Event.valueChanged)
-        
+        datePicker.addTarget(self, action: #selector(datePickerValueChanged), for: .valueChanged)
     }
     
     @objc private func doneClicked() {
         view.endEditing(true)
     }
     
-    @objc private func datePickerValueChanged(sender: UIDatePicker) {
-        dateField.text = formatter.string(from: sender.date)
+    @objc private func datePickerValueChanged() {
+        dateField.text = dateFormatter.string(from: datePicker.date)
     }
     
     private func createKeyboardToolbar() -> UIToolbar {
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
-        let flexibleSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: self, action: nil)
-        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(self.doneClicked))
+        
+        let flexibleSpace = UIBarButtonItem(
+            barButtonSystemItem: .flexibleSpace,
+            target: nil,
+            action: nil
+        )
+        let doneButton = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: self,
+            action: #selector(doneClicked)
+        )
+        
         toolbar.setItems([flexibleSpace, doneButton], animated: false)
         return toolbar
     }
     
     private func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        let actionOk = UIAlertAction(title: "Ok", style: .default) { (UIAlertAction) in
-            self.dismiss(animated: true)
+        let okAction = UIAlertAction(title: "OK", style: .default) { _ in
+            alert.dismiss(animated: true)
         }
-        alert.addAction(actionOk)
-        present(alert, animated: true, completion: nil)
+        alert.addAction(okAction)
+        present(alert, animated: true)
     }
-    
 }
 
-
 extension AddNoteVC: UITextFieldDelegate {
+    
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        return range.location < 30
+        return range.location < Constants.nameCharacterLimit
     }
 }
 
 extension AddNoteVC: UITextViewDelegate {
-
+    
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        return range.location < 200
+        return range.location < Constants.descriptionCharacterLimit
     }
     
     func textViewDidChange(_ textView: UITextView) {
         let fixedWidth = textView.frame.size.width
-        let newSize = textView.sizeThatFits(CGSize(width: fixedWidth, height: CGFloat.greatestFiniteMagnitude))
+        let newSize = textView.sizeThatFits(CGSize(width: fixedWidth, height: .greatestFiniteMagnitude))
         textView.frame.size = CGSize(width: max(newSize.width, fixedWidth), height: newSize.height)
     }
     
@@ -133,7 +156,7 @@ extension AddNoteVC: UITextViewDelegate {
     
     func textViewDidEndEditing(_ textView: UITextView) {
         if textView.text.isEmpty {
-            textView.text = "••••••••••"
+            textView.text = Constants.placeholderText
             textView.textColor = .lightGray
         }
     }

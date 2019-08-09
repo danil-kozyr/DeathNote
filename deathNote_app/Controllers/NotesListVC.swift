@@ -9,86 +9,116 @@
 import UIKit
 
 class NotesListVC: UIViewController {
+    
+    private enum Constants {
+        static let cellIdentifier = "deathNoteCellIdentifier"
+        static let createNewNoteSegue = "createNewNoteSegue"
+        static let estimatedRowHeight: CGFloat = 100
+    }
+    
+    private var notes: [DeathNote] = []
 
-    private var notes: [DeathNote] = [DeathNote]()
-
-    @IBOutlet weak var tableView: UITableView! {
+    @IBOutlet private weak var tableView: UITableView! {
         didSet {
             tableView.dataSource = self
+            tableView.delegate = self
         }
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationController?.navigationBar.prefersLargeTitles = true
-        initializeNote()
+        setupNavigationBar()
+        initializeSampleData()
     }
 
     override func viewWillAppear(_ animated: Bool) {
-        tableView.estimatedRowHeight = 100
-        tableView.rowHeight = UITableView.automaticDimension
+        super.viewWillAppear(animated)
+        setupTableView()
     }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == "createNewNoteSegue" {
-            let nextVC = segue.destination as! AddNoteVC
-            nextVC.delegate = self
+        if segue.identifier == Constants.createNewNoteSegue {
+            guard let addNoteVC = segue.destination as? AddNoteVC else { return }
+            addNoteVC.delegate = self
         }
     }
     
-    private func initializeNote() {
-        notes.append(DeathNote(name: "Kurt Cobain",
-                               description: "I don’t have the passion anymore, and so remember, it’s better to burn out than to fade away.",
-                               time: "12 Jul 2039 15:53"))
-        notes.append(DeathNote(name: "Jiah Khan",
-                               description: "I don’t know why destiny brought us together. After all the pain, the rape, the abuse, the torture I have seen previously I didn’t deserve this.",
-                               time: "23 Jun 2049 12:13"))
-        notes.append(DeathNote(name: "Vincent Van Gogh",
-                               description: "The sadness will last forever.",
-                               time: "28 Feb 2033 02:23"))
-        notes.append(DeathNote(name: "Marilyn Monroe",
-                               description: "I sound crazy, but I think I’m going crazy. I get before a camera and my concentration and everything I’m trying to learn leaves me. Then I feel like I’m not existing in the human race at all.",
-                               time: "01 Jun 2020 22:00"))
-        notes.append(DeathNote(name: "Robin Williams",
-                               description: "I’m done with that. Time to go. No more to come.”",
-                               time: "01 Jun 2020 22:00"))
-        
-        
+    private func setupNavigationBar() {
+        navigationController?.navigationBar.prefersLargeTitles = true
     }
-
+    
+    private func setupTableView() {
+        tableView.estimatedRowHeight = Constants.estimatedRowHeight
+        tableView.rowHeight = UITableView.automaticDimension
+    }
+    
+    private func initializeSampleData() {
+        notes = [
+            DeathNote(
+                name: "Kurt Cobain",
+                description: "I don't have the passion anymore, and so remember, it's better to burn out than to fade away.",
+                time: "12 Jul 2039 15:53"
+            ),
+            DeathNote(
+                name: "Jiah Khan",
+                description: "I don't know why destiny brought us together. After all the pain, the rape, the abuse, the torture I have seen previously I didn't deserve this.",
+                time: "23 Jun 2049 12:13"
+            ),
+            DeathNote(
+                name: "Vincent Van Gogh",
+                description: "The sadness will last forever.",
+                time: "28 Feb 2033 02:23"
+            ),
+            DeathNote(
+                name: "Marilyn Monroe",
+                description: "I sound crazy, but I think I'm going crazy. I get before a camera and my concentration and everything I'm trying to learn leaves me. Then I feel like I'm not existing in the human race at all.",
+                time: "01 Jun 2020 22:00"
+            ),
+            DeathNote(
+                name: "Robin Williams",
+                description: "I'm done with that. Time to go. No more to come.",
+                time: "01 Jun 2020 22:00"
+            )
+        ]
+    }
 }
 
 extension NotesListVC: UITableViewDataSource {
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "deathNoteCellIdentifier") as! DeathNoteCell
-        let note = notes[indexPath.row]
-        
-        cell.nameLabel.text = note.name
-        cell.descriptionTextView.text = note.description
-        cell.dateLabel.text = note.time
-        return cell
-    }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return notes.count
     }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: Constants.cellIdentifier, for: indexPath) as? DeathNoteCell else {
+            return UITableViewCell()
+        }
+        
+        let note = notes[indexPath.row]
+        cell.configure(with: note)
+        return cell
+    }
+}
+
+extension NotesListVC: UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         return true
     }
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            notes.remove(at: indexPath.row)
-            tableView.reloadData()
-        }
+        guard editingStyle == .delete else { return }
+        
+        notes.remove(at: indexPath.row)
+        tableView.deleteRows(at: [indexPath], with: .fade)
     }
-
 }
 
 extension NotesListVC: AddNewDeathNoteDelegate {
-    func onCreatedNew(note: DeathNote) {
+    
+    func didCreateNewNote(_ note: DeathNote) {
         notes.append(note)
-        tableView.reloadData()
+        let indexPath = IndexPath(row: notes.count - 1, section: 0)
+        tableView.insertRows(at: [indexPath], with: .automatic)
     }
 }

@@ -9,9 +9,14 @@
 import UIKit
 
 class DeathNoteCell: UITableViewCell {
-
-    @IBOutlet weak var nameLabel: UILabel!
-    @IBOutlet weak var dateLabel: UILabel!
-    @IBOutlet weak var descriptionTextView: UITextView!
     
+    @IBOutlet private weak var nameLabel: UILabel!
+    @IBOutlet private weak var dateLabel: UILabel!
+    @IBOutlet private weak var descriptionTextView: UITextView!
+    
+    func configure(with note: DeathNote) {
+        nameLabel.text = note.name
+        descriptionTextView.text = note.description
+        dateLabel.text = note.time
+    }
 }

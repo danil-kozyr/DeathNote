@@ -8,6 +8,6 @@
 
 import Foundation
 
-protocol AddNewDeathNoteDelegate {
-    func onCreatedNew(note: DeathNote) -> Void
+protocol AddNewDeathNoteDelegate: AnyObject {
+    func didCreateNewNote(_ note: DeathNote)
 }
